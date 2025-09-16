@@ -1,20 +1,15 @@
 ---
 Organizations:
 
+    - &OrdererOrg
+        Name: OrdererOrg
+        ID: OrdererMSP
+        MSPDir: ../organizations/ordererOrganizations/example.com/msp
+
     - &Org1
         Name: Org1MSP
         ID: Org1MSP
         MSPDir: ../organizations/peerOrganizations/org1.example.com/msp
-        Policies:
-            Readers:
-                Type: Signature
-                Rule: "OR('Org1MSP.member')"
-            Writers:
-                Type: Signature
-                Rule: "OR('Org1MSP.member')"
-            Admins:
-                Type: Signature
-                Rule: "OR('Org1MSP.admin')"
         AnchorPeers:
             - Host: peer0.org1.example.com
               Port: 7051
@@ -23,19 +18,22 @@ Organizations:
         Name: Org2MSP
         ID: Org2MSP
         MSPDir: ../organizations/peerOrganizations/org2.example.com/msp
-        Policies:
-            Readers:
-                Type: Signature
-                Rule: "OR('Org2MSP.member')"
-            Writers:
-                Type: Signature
-                Rule: "OR('Org2MSP.member')"
-            Admins:
-                Type: Signature
-                Rule: "OR('Org2MSP.admin')"
         AnchorPeers:
             - Host: peer0.org2.example.com
               Port: 9051
+
+Capabilities:
+    Channel: &ChannelCapabilities
+        V2_0: true
+    Orderer: &OrdererCapabilities
+        V2_0: true
+    Application: &ApplicationCapabilities
+        V2_0: true
+
+Application: &ApplicationDefaults
+    Organizations:
+    Capabilities:
+        <<: *ApplicationCapabilities
 
 Orderer: &OrdererDefaults
     OrdererType: etcdraft
@@ -48,31 +46,22 @@ Orderer: &OrdererDefaults
               ClientTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
               ServerTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
     Organizations:
-    Policies:
-        Readers:
-            Type: Signature
-            Rule: "OR('OrdererMSP.member')"
-        Writers:
-            Type: Signature
-            Rule: "OR('OrdererMSP.member')"
-        Admins:
-            Type: Signature
-            Rule: "OR('OrdererMSP.admin')"
-        BlockValidation:
-            Type: Signature
-            Rule: "OR('OrdererMSP.member')"
+    Capabilities:
+        <<: *OrdererCapabilities
 
 Channel: &ChannelDefaults
     Policies:
         Readers:
-            Type: Signature
-            Rule: "OR('Org1MSP.member','Org2MSP.member')"
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
         Writers:
-            Type: Signature
-            Rule: "OR('Org1MSP.member','Org2MSP.member')"
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
         Admins:
-            Type: Signature
-            Rule: "OR('Org1MSP.admin','Org2MSP.admin')"
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+    Capabilities:
+        <<: *ChannelCapabilities
 
 Profiles:
 
@@ -80,6 +69,13 @@ Profiles:
         <<: *ChannelDefaults
         Orderer:
             <<: *OrdererDefaults
+            Organizations:
+                - *OrdererOrg
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+                - *Org1
+                - *Org2
         Consortiums:
             SampleConsortium:
                 Organizations:
